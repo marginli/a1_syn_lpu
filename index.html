@@ -1,0 +1,819 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A1_syn LPU 成果</title>
+<link rel="icon" href="data:,">
+<style>
+:root{
+  --bg:#f6f7f9; --panel:#ffffff; --ink:#1d2329; --muted:#5d6670; --line:#dde1e6; --accent:#2563c9;
+  --single:#2f6fd6; --multi:#1f9a7a; --hub:#9aa3ad; --neither:#cfd4da; --sel:#e8590c; --chip:#eef1f5;
+  --canvas:#fbfcfd;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#121518; --panel:#1b1f24; --ink:#e6e9ec; --muted:#9aa4ae; --line:#2c333a; --accent:#6ea2ff;
+    --single:#5b93ee; --multi:#3cc19c; --hub:#6c7580; --neither:#3a4048; --sel:#ff8a3d; --chip:#252b31; --canvas:#15191d;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#121518; --panel:#1b1f24; --ink:#e6e9ec; --muted:#9aa4ae; --line:#2c333a; --accent:#6ea2ff;
+  --single:#5b93ee; --multi:#3cc19c; --hub:#6c7580; --neither:#3a4048; --sel:#ff8a3d; --chip:#252b31; --canvas:#15191d;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Sans TC","Microsoft JhengHei","PingFang TC",system-ui,sans-serif;font-size:15px;line-height:1.6}
+header{display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:10px 16px;background:var(--panel);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10}
+header h1{font-size:17px;margin:0 8px 0 0;font-weight:700}
+nav{display:flex;gap:4px;flex-wrap:wrap}
+nav button{border:1px solid var(--line);background:var(--bg);color:var(--ink);padding:5px 12px;border-radius:6px;cursor:pointer;font:inherit}
+nav button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.spacer{flex:1}
+#themeBtn{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:6px;padding:4px 10px;cursor:pointer}
+main{padding:0}
+section.page{display:none}
+section.page.on{display:block}
+/* 3D */
+#viewWrap{display:grid;grid-template-columns:280px 1fr 340px;height:calc(100vh - 54px);min-height:520px}
+#left,#right{background:var(--panel);overflow:auto;padding:12px}
+#left{border-right:1px solid var(--line)}
+#right{border-left:1px solid var(--line)}
+#stage{position:relative;background:var(--canvas)}
+#stage canvas{display:block;width:100%;height:100%;touch-action:none}
+.ctl{margin-bottom:12px}
+.ctl label.h{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}
+.seg{display:flex;flex-wrap:wrap;gap:4px}
+.seg button{flex:1;min-width:56px;border:1px solid var(--line);background:var(--bg);color:var(--ink);padding:5px 6px;border-radius:6px;cursor:pointer;font:inherit;font-size:13px}
+.seg button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.chips{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px}
+.chip{border:1px solid var(--line);border-radius:12px;padding:2px 4px 2px 9px;font-size:12px;cursor:pointer;background:var(--bg)}
+.chip.on{border-color:var(--accent);color:var(--accent);font-weight:600}
+.chip .x{margin-left:5px;padding:0 4px;border-radius:8px;font-weight:400;color:var(--muted, #888)}
+.chip .x:hover{background:var(--line)}
+.chk{display:flex;align-items:center;gap:6px;font-size:13px;margin:3px 0}
+#search{width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);font:inherit}
+#list{margin-top:8px}
+.item{display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:6px;cursor:pointer;font-size:13px}
+.item:hover{background:var(--chip)}
+.item.sel{outline:2px solid var(--sel)}
+.dot{width:10px;height:10px;border-radius:50%;flex:none}
+.item .n{margin-left:auto;color:var(--muted);font-variant-numeric:tabular-nums}
+.grp{font-size:12px;color:var(--muted);margin:10px 0 4px;font-weight:700}
+.legend{position:absolute;left:10px;bottom:10px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:12px}
+.legend div{display:flex;align-items:center;gap:6px}
+.views{position:absolute;right:10px;top:10px;display:flex;gap:4px;flex-wrap:wrap}
+.views button{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:6px;padding:3px 8px;cursor:pointer;font-size:12px}
+.stat{position:absolute;left:10px;top:10px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:12px;max-width:60%}
+#tip{position:absolute;pointer-events:none;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:3px 8px;font-size:12px;display:none}
+.card h2{font-size:17px;margin:0 0 4px}
+.card .badge{display:inline-block;padding:1px 8px;border-radius:10px;font-size:12px;color:#fff}
+.card table{border-collapse:collapse;width:100%;font-size:13px;margin:6px 0}
+.card td{padding:3px 4px;border-bottom:1px solid var(--line);vertical-align:top}
+.card td:first-child{color:var(--muted);white-space:nowrap;width:40%}
+.card h3{font-size:14px;margin:12px 0 4px}
+.neu{display:flex;gap:6px;align-items:center;font-size:12px;padding:2px 4px;border-radius:4px;cursor:pointer}
+.neu:hover{background:var(--chip)}
+.neu .sw{width:14px;height:3px;flex:none}
+.muted{color:var(--muted)}
+.small{font-size:12px}
+/* text pages */
+.doc{max-width:980px;margin:0 auto;padding:20px 16px 60px}
+.doc h2{font-size:22px;margin:28px 0 8px;border-bottom:1px solid var(--line);padding-bottom:4px}
+.doc h3{font-size:17px;margin:20px 0 6px}
+.doc table{border-collapse:collapse;width:100%;margin:10px 0;font-size:14px;background:var(--panel)}
+.doc th,.doc td{border:1px solid var(--line);padding:5px 8px;text-align:left;vertical-align:top}
+.doc th{background:var(--chip)}
+.doc .num{text-align:right;font-variant-numeric:tabular-nums}
+.note{background:var(--chip);border-left:4px solid var(--accent);padding:8px 12px;border-radius:4px;margin:10px 0}
+.flow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:10px 0}
+.flow span.b{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:13px}
+.flow span.a{color:var(--muted)}
+.tblWrap{overflow:auto}
+#regTable td,#regTable th{font-size:13px;white-space:nowrap}
+.fbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:8px 0}
+.fbar select,.fbar input{font:inherit;padding:4px 6px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink)}
+code{background:var(--chip);padding:0 4px;border-radius:3px;font-size:13px}
+@media (max-width: 900px){
+  #viewWrap{grid-template-columns:1fr;height:auto}
+  #stage{height:62vh}
+  #left,#right{border:0;max-height:none}
+  #left{order:2}#right{order:3}#stage{order:1}
+  .views{top:auto;bottom:10px;right:10px}
+  .stat{max-width:calc(100% - 20px)}
+  .legend{bottom:auto;top:86px}
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>果蠅 MaleCNS 的局部處理單元（A1_syn 第二版）</h1>
+  <nav id="tabs">
+    <button data-p="view" class="on">3D 檢視</button>
+    <button data-p="table">結果總表</button>
+    <button data-p="rules">判定規則</button>
+    <button data-p="about">結果說明</button>
+  </nav>
+  <span class="spacer"></span>
+  <button id="themeBtn" title="切換深淺色">深／淺</button>
+</header>
+<main>
+<section class="page on" id="p-view">
+  <div id="viewWrap">
+    <div id="left">
+      <div class="ctl"><label class="h">分區</label><div class="seg" id="segA"></div></div>
+      <div class="ctl"><label class="h">reach 門檻（LN 的分支最遠可伸出自己的區幾 µm；20 為主對照）</label><div class="seg" id="segT"></div></div>
+      <div class="ctl"><label class="h">上色方式</label><div class="seg" id="segC"><button data-v="region">依區上色</button><button data-v="verdict">依判定上色</button></div></div>
+      <div class="ctl"><label class="h">顯示</label>
+        <div class="chk"><input type="checkbox" id="cHub"><label for="cHub">畫出 hub 與兩者皆非（淡色）</label></div>
+        <div class="chk"><input type="checkbox" id="cVnc" checked><label for="cVnc">畫出腹神經索</label></div>
+        <div class="chk"><input type="checkbox" id="cOut" checked><label for="cOut">中樞輪廓</label></div>
+      </div>
+      <input id="search" placeholder="搜尋區名（例如 MB、FB、ME）">
+      <div id="list"></div>
+    </div>
+    <div id="stage">
+      <div class="stat" id="stat"></div>
+      <div class="views">
+        <button data-v="front">正面</button><button data-v="top">背面朝上</button><button data-v="side">側面</button><button data-v="back">後面</button>
+      </div>
+      <div class="legend" id="legend"></div>
+      <div id="tip"></div>
+    </div>
+    <div id="right"><div class="card" id="card"><p class="muted">點選 3D 圖或左側清單裡的區，這裡會顯示它的判定、LN 數、組成與抽樣的 LN 骨架。</p></div></div>
+  </div>
+</section>
+
+<section class="page" id="p-table"><div class="doc" id="tableDoc"></div></section>
+
+<section class="page" id="p-rules"><div class="doc" id="rulesDoc">
+<!--RULES-->
+<h2>判定規則：一個腦區怎樣才算局部處理單元</h2>
+<p>本頁完整交代 A1_syn 第二版從原始資料到 LPU 清單的每一條規則與每一個數字。3D 檢視與結果總表裡的每個判定，都是依這裡的規則算出來的。</p>
+
+<div class="note"><b>一句話版本</b>：一個腦區要有至少 10 顆「局部神經元」（突觸至少 80% 落在這個區裡、分支也沒有伸出去太遠的神經元），才算一個局部處理單元（LPU）。若這些神經元的密度分布成好幾團，就試著把區切開，每一塊各自也有 10 顆以上局部神經元才算好幾個 LPU，否則整區仍算 1 個。若一群神經元平均分散在幾個相連的區裡，先把那幾個區合併成一區再判。</div>
+
+<div class="flow">
+<span class="b">① 挑出參與判定的神經元</span><span class="a">→</span>
+<span class="b">② 判定每顆神經元的「家」與局部神經元（LN）</span><span class="a">→</span>
+<span class="b">③ LN 不到 10 顆的區是 hub</span><span class="a">→</span>
+<span class="b">④ 把共用一群神經元的 hub 併成一區</span><span class="a">→</span>
+<span class="b">⑤ A1 管線依 LN 密度判定</span><span class="a">→</span>
+<span class="b">⑥ 切分與讀法 A，得到最終清單</span>
+</div>
+
+<h2>0. 資料與名詞</h2>
+<ul>
+<li><b>MaleCNS v1.0</b>：雄果蠅整個中樞神經系統（腦＋腹神經索）的電子顯微鏡重建。每顆神經元有骨架（形狀描成的線段）與全部突觸的座標；每個突觸記錄它屬於哪顆神經元、是輸入端還是輸出端。神經元另有註解：大類（superclass）、細胞型別、胞體位置。</li>
+<li><b>腹神經索</b>：胸腹部的神經組織，相當於脊髓，分 23 區。四套分區共用這 23 區，所以腹神經索的結果四套相同。</li>
+<li><b>四套腦區劃分</b>（每套都加上腹神經索 23 區，例如正式 80 區實際是 80＋23 區；四套各自從頭跑一次整個流程）：<b>正式 80 區</b>是 MaleCNS 發布時附的官方腦區；<b>密度模板 65 區</b>是同事只用突觸密度切出的分區，區名如 D53_ME_L（第 53 區，大致對應左側髓質 ME）；<b>密度模板 283 塊</b>是把 65 區再依細胞型別組成切細，塊名加 _p 編號，如 D53_ME_L_p8；<b>邊界法 200 區</b>（2026-11-03 加入）是同事改用另一種方法切的分區：把突觸密度變化最劇烈的地方當邊界，所以比周圍稀疏的結構也切得出來，區名如 E052_PB（第 52 區，突觸最多落在官方的前腦橋 PB）。四套都放在同一個座標框裡，框切成邊長 1 µm 的立方格（本頁說「格」時，除非另外註明，都是這種 1 µm 格）。</li>
+<li><b>局部處理單元（LPU）</b>：Chiang 等人 2011 年的定義——擁有自己一群局部神經元、而且有神經束與外界相連的腦區。實作上（第 5 節），LN 夠多的區不另查神經束；本網頁的 9 組結果（3 套分區 × 3 個 reach 門檻）裡，所有判為 LPU 的區都有神經束。<b>hub</b>：沒有自己的局部神經元、只是神經束端點的區（一區要是某條束的端點才算有束，只被束從旁經過不算；見第 5 節）。</li>
+<li><b>局部神經元（LN, local neuron）</b>：突觸幾乎都在一個區裡的神經元。下面第 2 節給出精確的條件。</li>
+<li><b>神經束</b>：至少 3 顆神經元走同一條路徑、連接兩個區的長程纖維。</li>
+</ul>
+
+<h2>1. 哪些神經元參與判定</h2>
+<p>不是每顆神經元都拿來替腦區「投票」。以下幾類先排除，因為它們的突觸本來就不以腦內任何一區為家：</p>
+<table>
+<tr><th>排除的類別</th><th>理由</th><th>排除顆數</th></tr>
+<tr><td>胞體在中樞外（大類含 sensory 感覺神經元、ENS 腸道神經系統）</td><td>胞體在中樞外，只把軸突送進來</td><td class="num">15,959</td></tr>
+<tr><td>沒有胞體註記（實驗室先前 LN 補充規則的第 2 條，沿用）</td><td>多半是沒接回本體的重建碎片</td><td class="num">9,171</td></tr>
+<tr><td>上行、下行神經元（ascending、descending）</td><td>跨越腦與腹神經索</td><td class="num">1,820＋1,312</td></tr>
+<tr><td>運動、傳出、內分泌（motor、efferent、endocrine）</td><td>目標在肌肉或腺體</td><td class="num">806＋94＋90</td></tr>
+<tr><td>沒有大類註解</td><td>多是重建碎片。依據：全部資料裡「只有 10 顆以下突觸、而且全在一區」這種像碎片的神經元共 142 顆，其中 122 顆正是沒有註解的；所以用「沒有註解」就能擋掉大部分碎片，不必另設最少突觸數</td><td class="num">372</td></tr>
+</table>
+<p>剩下 135,498 顆。另外，分區標籤沒有填滿每一處組織（區與區之間有縫隙；正式 80 區有 2.9% 的突觸、同事的三套分區（65 區、283 塊、200 區）各有 1.6% 落在縫隙裡），所以神經元還要有 <b>80% 的突觸落在有標籤的組織裡</b>（哪一區都可以）。這一步正式 80 區再排掉 1,991 顆、同事的三套分區各排掉 824 顆。最後參與判定的：正式 80 區 133,507 顆，65 區、283 塊與 200 區各 134,674 顆。不另設「最少突觸數」。</p>
+<p>這群神經元從頭到尾都一樣：算 LN、判 hub、算併區的住戶，全部用同一群。</p>
+
+<h2>2. 局部神經元（LN）與「家」</h2>
+<h3>2.1 突觸比例：80%</h3>
+<p>對每顆參與的神經元，數它在每個區的突觸數（<b>輸入與輸出合計</b>），除以它落在分區內的突觸總數（縫隙裡的不算進分母）。</p>
+<ul>
+<li>某一區佔 ≥ 80%：這一區就是它的家，它是這一區的 <b>LN 候選</b>。</li>
+<li>沒有任何一區到 80%：把各區比例由大到小累加，直到 ≥ 80% 而且用到的區彼此串得起來（相鄰的定義見 4.1）；到 80% 還串不起來，就照比例順序繼續加下一區。用到的那組區是它的<b>候選聯集</b>，供第 4 節併區用。（單一區就到 80% 的神經元，候選就是那一區。）</li>
+</ul>
+<p>只看突觸、不看纖維長度：一條軸突穿過某區會留下長度，但沒有突觸，不代表它在那裡做事。</p>
+
+<h3>2.2 reach：分支不能伸出去太遠</h3>
+<p>只看突觸比例，會漏掉「一條分支伸得很遠、但那邊突觸很少」的神經元。所以 LN 還要通過幾何條件 <b>reach</b>：骨架離自己家（單一區或聯集）的表面最遠多少 µm。超過門檻就不算 LN。門檻有 <b>10、20、30 µm</b> 三組，各跑一遍，<b>20 µm 為主對照</b>。</p>
+<p>胞體常在家的外面，連到家的那段纖維不該算「伸出去」，所以量 reach 之前要先扣掉一段：</p>
+<ol>
+<li>從胞體沿骨架往家走，找<b>第一個</b>「側枝在別的區有至少 1 顆突觸」的分枝點。</li>
+<li>扣掉胞體到這個分枝點的一段，連同這一段上沒伸進別區的側枝（不論多長）。分枝點之後的全部（含之後的主幹與所有側枝）都算進 reach。</li>
+<li>找不到這種分枝點，就扣掉胞體到家的整段，連同其上的側枝。</li>
+</ol>
+<p>例：胞體在 A 區外 100 µm，纖維往 A 走；途中 60 µm 處分出一枝伸進 B 區、並在 B 有突觸。則扣掉前 60 µm，後 40 µm 主幹與那條側枝都算 reach，分枝點本身離 A 區表面就有 40 µm，所以這顆神經元的 reach 至少 40 µm（reach 量的是直線距離，不是纖維長度）。若那條側枝沒有突觸落在任何別的區，整段 100 µm 連側枝一起扣掉。</p>
+<p>用「有沒有突觸」而不是「骨架點有沒有進入別區」判斷側枝：約 6.7% 的神經元胞體落在某個標籤區內，電顯骨架在胞體處常描出放射狀的短線段，用骨架點判斷時，這些短線會被誤當成伸進別區。</p>
+
+<h3>2.3 一個區有沒有自己的 LN 族群：10 顆</h3>
+<p>通過 2.1 與 2.2 的就是 <b>LN</b>。一區要有 <b>≥ 10 顆 LN</b>，才算有自己的族群。LN 與併區這兩步只用 80% 與 10 顆兩個數字（加上 reach 門檻），併區時共用同一對數字；後段的密度分群另有沿用的技術參數（第 5、7 節）。</p>
+
+<h2>3. hub</h2>
+<p>LN 不到 10 顆的區是 <b>hub</b>。併區時只看這一點，不管它有沒有神經束；最後判定裡「連神經束都沒有」的<b>兩者皆非</b>，在併區時也當 hub 看待。</p>
+
+<h2>4. 併區：把共用一群神經元的 hub 合成一區</h2>
+<p>LN 以單一區為家，所以若一群神經元平均分散在三四個區（例如蕈狀體的 Kenyon 細胞：樹突在萼，軸突經過柄，再分到 α、β、γ 等葉，官方分區把這些部位分成 7 區），每一區都拿不到 80%，全部變成 hub。併區把這種區合回一區再判。</p>
+<h3>4.1 相鄰</h3>
+<p>聯集的成員在組織上要能一節一節串起來。分區標籤之間有縫隙，所以「兩區相鄰」這樣判：每個區從自己的邊界，往「有神經纖維經過的縫隙格」裡一格一格長，每格歸最先長到它的區；沒有纖維經過的縫隙格不長。兩區長出的範圍碰到就算相鄰，接觸面不設下限。成員只要能串成一片即可，不要求兩兩相鄰。</p>
+<h3>4.2 住戶</h3>
+<p>一顆神經元是聯集 U 的<b>住戶</b>，若且唯若：它自己的候選聯集（2.1）<b>正好</b>等於 U，而且它對 U 量的 reach（量到 U 的外表面）不超過門檻。每顆神經元最多是一個聯集的住戶。</p>
+<p>為什麼這樣定義：試算時考慮過另一種住戶定義——「在 U 裡 ≥ 80%，而且拿掉 U 的任一成員後，不是不到 80%、就是 U 斷成兩片」。後半句會出問題：任何剛好夾在兩個成員中間的區，拿掉它 U 就斷開，於是它也成了「必要成員」，這叫<b>借道</b>。例如 SCL 這一區緊貼萼與 γ 葉，Kenyon 細胞的纖維經過它附近，「萼＋SCL＋γ 葉」在那種定義下有 564 顆住戶（右側），跟真正的「萼＋柄＋γ 葉」搶同一群神經元。改用「自己的候選正好是 U」後，「萼＋SCL＋γ 葉」只剩 7 顆住戶，不成立。</p>
+<h3>4.3 一個聯集要併，須同時滿足</h3>
+<ol>
+<li>住戶 ≥ 10 顆。</li>
+<li>成員都是 hub（本來就有 LN 族群的區不參加）。</li>
+<li>成員在相鄰關係上串成一片。</li>
+<li>通過下面的互選。</li>
+</ol>
+<h3>4.4 互選與輸家歸隊</h3>
+<p>不同神經元的候選聯集常常共用成員區，而一個區只能併進一個聯集，所以候選之間要競爭。併區一輪一輪做：</p>
+<ul>
+<li><b>互選</b>：每一輪把已併好的聯集當成一個區，重算每顆神經元的候選與住戶。每個 hub 在所有含它、住戶 ≥ 10 顆的候選中，投給住戶最多的那一個（平手不投）；已併好的聯集不投票。一個候選要它的每一個 hub 成員都投給它，才會被併。</li>
+<li><b>誰能收 hub</b>：本來就有自己 LN 族群的區永遠不收 hub。由 hub 併成的聯集可以再收 hub，但只能收自己<b>歸隊名單</b>上的。</li>
+<li><b>歸隊名單</b>：一個聯集在某一輪併成時，看同一輪裡還有哪些候選沒被併，條件是住戶也 ≥ 10、而且和它共用成員。這些落選候選裡的 hub 記進它的名單。名單只記這一次，之後不擴大。</li>
+<li><b>歸隊候選</b>：「這個聯集＋名單上的 hub」這種候選。它同樣要住戶 ≥ 10、也要通過互選（其中的 hub 投給它）；同一個聯集一輪只收一個，若有好幾個，收住戶最多的。重複到沒有新的併入為止。</li>
+</ul>
+<p>例（左側蕈狀體，reach 20）：第 1 輪「萼＋柄＋α＋β」住戶 690 顆、「萼＋柄＋γ」568 顆，萼與柄投給前者，前者併成新區，同一輪還有幾個含萼或柄、住戶也 ≥ 10 顆的落選候選（含 γ、α′、β′ 葉或 CRE 的組合），所以 γ、α′、β′ 葉與 CRE（緊鄰蕈狀體 γ 葉的一個腦區）記進它的歸隊名單。第 2 輪把新區當一區重算，有 618 顆神經元的候選正好是「新區＋γ 葉」，γ 葉歸隊；第 3、4 輪 β′、α′ 葉歸隊，7 件到齊；CRE 始終沒有足夠的住戶，沒有歸隊。</p>
+<h3>4.5 併好之後</h3>
+<p>併好的聯集在後續步驟當成一個普通的區：用第 2 節同一套規則重算每顆神經元的家與 LN（住戶在聯集裡已有 80%，自然成為它的 LN），再交給 A1 管線。</p>
+<h3>4.6 沒有採用的舊條件</h3>
+<p>實驗室先前的併區規則編為 R0–R4：R0（住戶要夠多）與 R2（成員都是 hub）保留，就是 4.3 的第 1、2 條；其餘如下。</p>
+<table>
+<tr><th>舊條件</th><th>內容</th><th>為什麼不用</th></tr>
+<tr><td>份額門檻 q</td><td>神經元在一區的比例超過 q（如 10%）才算「用到」這一區</td><td>細切後三分之一的神經元在每一塊都不到 10%，分不到家；改用 2.1 的累加</td></tr>
+<tr><td>R1 交通比例</td><td>住戶要佔所有用到該區的神經元的四成</td><td>單一區判 LPU 沒有這種條件，聯集不該多一個；細切的塊被幾千顆路過的神經元用到，永遠過不了</td></tr>
+<tr><td>R3 雙向突觸</td><td>hub 併進 LPU 時，住戶在 hub 裡要同時有輸入與輸出</td><td>本題不讓 hub 併進原本的 LPU</td></tr>
+<tr><td>R4 左右對稱</td><td>對側相對應的區也要能併</td><td>改為併完後報告對稱性，不當關卡</td></tr>
+<tr><td>住戶多的先併</td><td>依住戶數排序依次併</td><td>結果取決於排序，門檻一變排序就變；改用 4.4 的互選</td></tr>
+<tr><td>「每區有收有送」</td><td>住戶在每個成員區都要有輸入與輸出</td><td>研究者裁示不加；相鄰的投射路徑（一區收、另一區送）仍可能被併，列為已知限制</td></tr>
+</table>
+
+<h2>5. A1 管線：依 LN 密度判定</h2>
+<p>併區後的分區交給實驗室的 A1 管線。A1 把 Chiang 2011 的定義寫成 14 道編號的指令；本題把指令 1–3 的 LN 名單換成第 2 節的結果，指令 4–14 與其參數全部沿用，不改。</p>
+<table>
+<tr><th>指令</th><th>做什麼</th></tr>
+<tr><td>4–5 密度場與熱點</td><td>只對 LN ≥ 10 顆的區做（不到 10 顆的不分群，直接看第 12–13 步的神經束）。把一區所有 LN 的突觸位置疊成密度場：底層是 2 µm 格，每邊 4 格併成一個 8 µm 的分析體素；3×3×3 移動平均後，取密度最高的四分之一（上四分位，75%）為熱點。</td></tr>
+<tr><td>6–7 分群</td><td>把熱點依位置做階層式分群（UPGMA）。在樹的哪個高度切開會決定分出幾團（高度是分群樹的內部距離單位，越大分得越粗）：高度從 4 掃到 25，畫出「團數對高度」的曲線，取曲線較平的 14–20 為「平台」（所有區都用同一段平台），平台上每個高度各數一次團數；每次把體素順序打亂重算，共 9 次。小於腦區體積 1% 的團不算。相鄰兩團之間若沒有明顯的密度低谷（交界密度超過兩團峰值較小者的一半，θ = 0.5），合回一團。平台上所有高度、所有 9 次裡數出的最少與最多團數，就是「候選 a–b 個 LPU」的 a 與 b。</td></tr>
+<tr><td>8–11 招募與 c 值</td><td>每一團挑種子神經元，把纖維與它們重疊 50% 以上的 LN 一顆顆加進來（比對時把團撐大 4 個分析體素；第 10 步計算時，離胞體 10 格以內的初級神經突——胞體伸出的那段主幹——不算進去），形成這一團的族群；再算 c 值：族群纖維在團的核心與區內其餘部分的密度比（論文以 c &gt; 2 為門檻）。c 值只列在輸出裡供參考，第 14 步的判定不用它。</td></tr>
+<tr><td>12 神經束</td><td>至少 3 顆神經元、兩端平均終端位置相距 30 µm 以內、總路徑長度相近（短的 ÷ 長的 > 0.60），算同一條束；一顆神經元在一區至少有 5 個分支末端才算「連到」這區；同一條束的每一顆神經元都連到同一對區，這兩區就是束的端點；骨架至少經過這區 5 個體素才算「碰到」這區（用來判斷束經過哪些區）。數出每區有幾條束以它為端點；只被經過（碰到）的區不算有束。</td></tr>
+<tr><td>14 判定</td><td>LN ≥ 10 顆的區：平台上每個高度、每次重算都只有一團（a = b = 1）→ <b>單一 LPU</b>；有些高度不只一團 → <b>候選 a–b 個 LPU</b>。LN 不到 10 顆的區：有束 → <b>hub</b>；沒有束 → <b>兩者皆非</b>。</td></tr>
+</table>
+<p class="small muted">註：密度場沿用舊的突觸格資料，一個 2 µm 格裡同一顆神經元有突觸就記一次（數的是有突觸的格子數，不是突觸數）；LN 的比例則數突觸數。這是刻意不改管線（只換 LN 名單）的結果。</p>
+
+<h2>6. 切分與讀法 A：最終清單</h2>
+<p>「候選 a–b 個 LPU」只說密度上有幾團，沒說每一團是不是 LPU。所以把這種區切開重判：</p>
+<ol>
+<li><b>切</b>：用平台中間的高度 17 把熱點分群，再套一次密度谷規則（θ = 0.5）。全部合回一團的區就不切。剩下兩團以上的，把這個區的每一格歸給離它最近的那一團熱點，切成幾個子區（子區合起來就是原來的區）。</li>
+<li><b>重算</b>：把切出的子區當成新區，用第 1–2 節同一套規則重算 LN（同樣要 ≥ 10 顆、80% 突觸在子區內、reach 不超過門檻），再跑一次 A1 管線。子區不再往下切。</li>
+<li><b>結局</b>：每個子區都有 ≥ 10 顆 LN → <b>全切開</b>，子區各算一個；只有部分子區有 → <b>切一半</b>；都沒有 → <b>切不開</b>。</li>
+<li><b>讀法 A</b>：全切開的，每個子區各算 1 個 LPU；切一半或切不開的，母區整區算 1 個 LPU（不退回 hub）。沒切的區照它的判定，LN ≥ 10 顆的整區算 1 個 LPU。</li>
+</ol>
+<p>所以最終清單裡每個 LPU 都是下列之一：沒切而 LN ≥ 10 的區、全切開後的子區、切一半或切不開而整區計的母區。結果總表把它們依管線判定分成「單一」（密度上只有一團）與「多個候選」（有好幾團但整區算 1 個）兩類，LPU 數 ＝ 兩類相加；3D 檢視裡藍色是前者、綠色是後者，全切開的子區依它自己的判定上色。</p>
+
+<h2>7. 全部數字一覽</h2>
+<table>
+<tr><th>數字</th><th>用在哪</th><th>來源</th></tr>
+<tr><td>80%</td><td>LN 的突觸比例；候選聯集累加到的比例；參與判定須落在有標籤組織的比例；住戶的比例</td><td>A1（沿用）</td></tr>
+<tr><td>10 顆</td><td>一區有自己 LN 族群的最低數；聯集住戶的最低數；LN 不到 10 顆的區不做密度分群（第 5 節）</td><td>A1（沿用）</td></tr>
+<tr><td>10／20／30 µm（主 20）</td><td>reach 門檻</td><td>本題</td></tr>
+<tr><td>1 顆突觸</td><td>reach 扣除段裡「側枝伸進別區」的判準</td><td>本題（「有或沒有」）</td></tr>
+<tr><td>75%、3×3×3、1%、50%、30 µm、0.60</td><td>熱點、平滑、最小群、招募重疊、束的終端距離、束的長度相似度</td><td>Chiang 2011 論文</td></tr>
+<tr><td>c &gt; 2（論文另把區分成核心 80%／外圍 20% 來算 c）</td><td>c 值；本管線只列出、不用於判定</td><td>Chiang 2011 論文</td></tr>
+<tr><td>8 µm 分析體素、9 次、高度 4–25、平台 14–20、切分高度 17、撐大 4 格、初級神經突 10 格、3 顆、5 個末端、5 個體素</td><td>A1 管線的技術參數（見第 5、6 節）</td><td>A1（沿用，不改）</td></tr>
+<tr><td>θ = 0.5</td><td>密度谷規則</td><td>實驗室 2026-10-28 定案</td></tr>
+</table>
+<p class="small muted">另有兩項不影響判定：(1) 切分時曾寫一條「交界兩側 LN 的細胞型別組成明顯不同才算切開」的準則（δ），試算時沒有任何一對相鄰團是只靠它分開的，所以程式保留、預設關閉；(2) 指令 13（第 5 節表中沒列）會把 LN 的 80% 門檻換成其他值再算一次，看結果變不變，只作敏感度檢查。</p>
+</div></section>
+
+<section class="page" id="p-about"><div class="doc" id="aboutDoc">
+<!--ABOUT-->
+<h2>結果說明</h2>
+<p>這個網頁展示實驗室「A1_syn 第二版」的計算成果：在果蠅雄性全中樞電顯資料 MaleCNS v1.0 上，用只看突觸的新規則（見「判定規則」分頁），把四套腦區劃分各自判出局部處理單元（LPU）。前三套於 2026-10-30 完成，第四套（邊界法 200 區）於 2026-11-03 完成，四套分區 × 三個 reach 門檻共 12 組，每組都通過預先寫好的自動核對（核對程式有沒有跑對，不判斷生物上的對錯）。</p>
+<div class="note"><b>本頁用到的名詞</b>（完整定義見「判定規則」分頁）<br>
+<b>資料</b>：MaleCNS 是雄果蠅整個中樞神經系統（腦＋腹神經索；腹神經索在胸腹部，相當於脊髓）的電子顯微鏡重建，每顆神經元都有<b>骨架</b>（描出形狀的線段）與全部突觸的座標。<br>
+<b>四套分區</b>：<b>正式 80 區</b>是資料發布時附的官方腦區；<b>密度模板 65 區</b>是同事只依突觸在空間中的疏密切出的分區，區名如 D53_ME_L（第 53 區，大致對應左側髓質 ME）；<b>密度模板 283 塊</b>把 65 區的每一區（稱<b>母區</b>）再依細胞型別切細，塊名加 _p 編號，如 D53_ME_L_p8；<b>邊界法 200 區</b>是同事另一種切法（以突觸密度變化最劇烈處為邊界），區名如 E052_PB（第 52 區，突觸最多落在官方的前腦橋 PB）。四套都另加腹神經索的 23 區，各自跑一次完整流程，判定規則完全相同。<br>
+<b>LN（局部神經元）</b>：突觸至少 80% 落在同一區、分支也沒伸出去太遠的神經元。<b>LPU（局部處理單元）</b>：有至少 10 顆自己的 LN 的區，是腦裡相對獨立的處理單位。<b>hub</b>：LN 不到 10 顆、但有長程<b>神經束</b>（至少 3 顆神經元走同一條路徑連接兩區）的區，像轉運站。<b>兩者皆非</b>：LN 不到 10 顆、也沒有神經束。<br>
+<b>reach</b>：LN 的分支最遠可以伸出自己的區幾 µm；門檻越寬（數字越大），越多神經元算得上 LN。<br>
+<b>併區</b>：有些神經元的突觸平均分散在幾個相連的區，每一區都不到 80%，這幾區於是都成了 hub。每顆神經元把各區比例由大到小加到 80% 為止，用到的那組區叫它的<b>候選</b>；候選正好是某組區的神經元，就是那組區的<b>住戶</b>。住戶 ≥ 10 顆、成員都是 hub，這組區就併成一區，稱<b>聯集</b>。併好後聯集當一個區重新判定，住戶在聯集裡已有 80% 突觸，就成了聯集的 LN。<br>
+<b>A1 管線與切分</b>：實驗室把 LPU 定義寫成程式的 A1 管線。它把一區所有 LN 的突觸疊成密度圖，看密集處是一團還是好幾團；好幾團的區會試著切開，相鄰兩團之間要有明顯的密度低谷才分開（<b>密度谷規則</b>），每塊都有 10 顆以上 LN 才算切開。<br>
+<b>第一版、第二版</b>：同日先算的第一版用較簡單的併區規則；本網頁是改進後的第二版（差別見下方「和第一版比」）。<br>
+腦區縮寫（IB、SPS、CRE 等）是官方的腦區代號，對照表在本頁最後；當代號看即可。</div>
+
+<h3>怎麼看 3D 檢視</h3>
+<ul>
+<li>左上選分區（正式 80 區、密度模板 65 區、密度模板 283 塊、邊界法 200 區）與 reach 門檻（10、20、30 µm；20 是主對照）。</li>
+<li>計數方式：成功切開的區，每個子區各算 1 個 LPU；沒切開的區整區算 1 個。</li>
+<li>上色方式有兩種，用左側「上色方式」切換。<b>依區上色</b>（預設）：每個 LPU 一種顏色，方便分出區與區的邊界；判定類別看右側卡片與左側清單的「單一／多候選」標記。<b>依判定上色</b>：藍色＝單一 LPU；綠色＝密度上有好幾團、但沒有成功切開（切不開或只切開一部分）的區，整區算 1 個 LPU。成功切開的子區依它自己的判定上色（子區本身若又有好幾團、但不再往下切，就是綠色）。勾「畫出 hub 與兩者皆非」可看到其餘的區（淡灰）。</li>
+<li>點一個區：右側顯示它的判定、LN 數、神經束數、切分結果、併區成員、LN 細胞型別，並在 3D 中畫出隨機抽樣的最多 20 顆 LN 骨架；卡片上的「全部 N 顆」按鈕可改畫這一區全部的 LN（大區要多等幾秒）。</li>
+<li>按住 Shift 再點（3D 圖或左側清單）可以加選好幾區一起顯示，Shift＋點已選的區則取消它（只點不拖才算選取；按住 Shift 拖曳仍是平移）；不按 Shift 直接點一區，就回到只選這一區。多選時右側卡片顯示最後點的那一區，這一區用選取色，其他已選的區保留原色；卡片上方列出全部已選的區，點名字換成卡片顯示那一區，按 × 取消。</li>
+<li>拖曳旋轉；右鍵或 Shift＋拖曳平移；滾輪縮放；右上角按鈕切換正面、背面朝上、側面、後面。網址會記下目前的分區、門檻與選取的區，可直接分享。</li>
+<li>聯集（併區併成的區）以代表名加「＋n 區」顯示，例如「MB_CA_R＋6 區」是右側蕈狀體 7 件。切開的子區：第一塊沿用原名，其餘以「.2」「.3」結尾。</li>
+</ul>
+
+<h3>主要結果（reach 20 µm）</h3>
+<table>
+<tr><th>分區</th><th class="num">腦 LPU</th><th class="num">腹神經索 LPU</th><th>併出的聯集</th></tr>
+<tr><td>正式 80 區</td><td class="num">35</td><td class="num">15</td><td>左、右蕈狀體各 7 件；IB＋SPS 兩側＋ICL_L＋PLP_L＋SCL_L＋IPS_R；CRE_R＋EB＋LAL_R；PLP_R＋PVLP_R＋SCL_R；腹神經索 Ov 兩側＋LTct</td></tr>
+<tr><td>密度模板 65 區</td><td class="num">31</td><td class="num">15</td><td>腹神經索 Ov 兩側＋LTct</td></tr>
+<tr><td>密度模板 283 塊</td><td class="num">58</td><td class="num">15</td><td>左視葉 5 塊；右視葉 D03_LO_R_p2＋D04_LOP_R_p2；扇形體 FB 7 層；D20_ICL_R_p2＋D29_AVLP_L_p2（模板以最接近的官方區命名母區，但兩塊在官方分區裡都屬於前腦橋 PB，各佔中線一側，等於把 PB 併回一區）；腹神經索 Ov 兩側＋LTct</td></tr>
+<tr><td>邊界法 200 區</td><td class="num">49</td><td class="num">15</td><td>前腦橋兩區＋IB 兩區；右側 SMP 兩區＋CRE_R＋LAL_R＋γ 葉兩區；右髓質＋右小葉板；左小葉板兩組、右小葉板一組（每組由兩區組成）；左 PVLP 兩區＋AVLP_L＋SAD；PLP_L＋SCL_L；GNG 兩區；腹神經索 Ov 兩側＋LTct</td></tr>
+</table>
+<p>r10／r30 的腦 LPU 數：80 區 30／37、65 區 31／34、283 塊 51／61、200 區 41／52。門檻越寬，越多神經元算 LN，LPU 越多、hub 越少。前三套分區的聯集數在三個門檻之間最多差 2 個；200 區在 r10／r20／r30 依序是 8／10／12 個，差 4 個。</p>
+
+<h3>幾個值得注意的地方</h3>
+<ul>
+<li><b>蕈狀體</b>（與學習記憶有關的結構，主要神經元叫 Kenyon 細胞，樹突在萼、軸突經過柄再分到幾個葉）：在正式 80 區，左右兩側的 7 個部件（萼、柄、α、β、α′、β′、γ 葉）三個門檻下都各併成一區。密度分群數出 2–4 團，但切開後每顆 Kenyon 細胞都橫跨好幾個子區，沒有子區留得住自己的 LN，所以整區算 1 個 LPU。在兩套密度模板裡，蕈狀體沒有併：模板只把萼與 γ 葉切成獨立的區，柄與 α、β 葉落在 SMP、SLP、LAL 等本身已是 LPU 的區裡。Kenyon 細胞的突觸也分布在這些區裡，所以它們的候選都含有這些區；而聯集的成員必須全是 hub，含有 LPU 的候選併不成，所以萼與 γ 葉一直留在 hub。</li>
+<li><b>嗅葉</b>（嗅覺的第一站，局部神經元連接許多個嗅小球、分支遍布整個嗅葉）：正式 80 區把整個嗅葉當一區，這些神經元的突觸有 80% 以上在區內，左右各有 118、117 顆 LN，各是 1 個 LPU。兩套密度模板裡嗅葉既沒有 LPU、也沒有併，原因和蕈狀體相同，都是一部分被切進已是 LPU 的區：模板把嗅葉約三分之一劃進名叫 LAL 的區（65 區 D33_LAL_L、D23_LAL_R，佔官方嗅葉體積的 34%、33%；283 塊是其中的 D33_LAL_L_p1、D23_LAL_R_p1，佔 27%、26%）。模板的區名只是大致對應：這兩區大部分是官方的 LAL（側副葉，與嗅葉相鄰的腦區），同時包含整個官方 LAL，LN 主要是 LAL 那一部分的神經元（65 區 30、51 顆；283 塊 30、50 顆），所以本身是 LPU。其餘嗅葉在 65 區被切成 6 塊（左 2 塊、右 4 塊；D10_AL_L 有 7 顆 LN、D35_AL_R 有 1 顆，其他 4 塊 0 顆），在 283 塊被切成 114 塊（LN 全是 0）；嗅葉 LN 分支遍布整個嗅葉，切開後在任何一塊都不到 80%。以正式 80 區左右嗅葉的 235 顆 LN 來查它們在模板裡的候選（只查了 r20）：65 區左側 118 顆中 93 顆、右側 117 顆中 100 顆的候選含這兩個 LAL 區；283 塊 235 顆中 231 顆含到。含 LPU 的候選併不成；只含嗅葉小塊的候選住戶都不到 10 顆（65 區最多是 D10_AL_L 單獨的 7 顆；283 塊全部 235 顆的候選中位含 13–14 塊，剩下只含嗅葉小塊的 4 顆組合各不相同，每種只有 1 顆）。</li>
+<li><b>扇形體</b>：283 塊把扇形體切成 7 層，r10 與 r20 下 7 層併回一區、判為單一 LPU。r30 下 p1、p4 各自就有 10 顆以上 LN，成了獨立的 LPU，只剩 p2＋p7 併成一組，p3、p5、p6 留在 hub；扇形體在 r30 共算 3 個 LPU。</li>
+<li><b>283 塊的 LPU 比 65 區多</b>（r20：58 對 31）。多出來的幾乎都在視葉（腦兩側處理視覺的部分，由外而內有視網膜板 LA、髓質 ME、小葉 LO、小葉板 LOP）：283 塊視葉 37 個、其餘 21 個；65 區視葉 12 個、其餘 19 個。依 283 塊所屬的 65 區母區算，左髓質 D53_ME_L 底下有 10 個、右髓質 D02_ME_R 8 個、左小葉 D52_LO_L 6 個、右小葉 D03_LO_R 5 個（這四個母區在 65 區各只算 1 個）；其餘 8 個在另外 7 個母區，各 1 到 2 個：右小葉板 D04_LOP_R 2 個，左小葉板 D54_LOP_L、D55_LOP_L，髓質 D00_ME_R、D01_ME_R、D51_ME_L，視網膜板 D61_LA_R 各 1 個（65 區把髓質、小葉板、視網膜板也各切成好幾區）。另外，下一條的兩個視葉聯集切出的子區也在這 37 個裡，記在聯集代表區（取名用的那一塊）所屬的母區：右小葉 D03_LO_R 的 5 個中有 2 個、左小葉 D52_LO_L 的 6 個中有 3 個是這種子區。大多數視葉細塊各自留得住 10 顆以上的 LN，本身就是 LPU；併區只併 hub，所以它們併不回去（少數本身是 hub 的細塊才會被併，見下一條）。在 65 區與 80 區上，A1 管線自己會嘗試切開髓質這類大區，但密度谷規則發現沒有低谷，又合回一區；283 塊的切法是模板事先做的，沒有經過這一關。也就是說，283 塊的視葉細塊之間不一定有密度上的分界，多出來的 LPU 主要反映模板切得比較細，而不是新規則找到了新的單元。視葉本來就是由幾百根重複的「柱」並排組成（每根柱對應視野裡的一個小點，每根柱裡有同一套神經元），又分成好幾層；同一套重複結構要算成一個還是切成很多個 LPU，屬於分區粒度的選擇；研究者 2026-10-31 裁示接受這個結果：視葉切細就是多個 LPU，不另訂併回的規則。</li>
+<li><b>投射路徑</b>（2026-10-31 逐顆查過）。投射路徑＝一種神經元在甲區收訊號、把軸突伸到乙區送出，甲、乙兩區是這條路徑的頭和尾。283 塊的視葉有幾個聯集，其實就是這樣的頭和尾被併在一起：
+<ul>
+<li><b>右視葉 D03_LO_R_p2（小葉）＋D04_LOP_R_p2（小葉板）</b>，r20、r30 都有。r20 的 265 顆住戶中 264 顆是 T5d、1 顆是 T5c。T5 是偵測運動方向的視覺神經元，樹突在小葉收訊號、軸突在小葉板送出；a–d 四種亞型各偏好一個運動方向，軸突終止在小葉板的不同層。模板正好把右小葉板切成幾塊：右側 T5d 的輸出 78% 落在 D04_LOP_R_p2，T5a、T5b 幾乎全落在 D04_LOP_R_p1，T5c 多半（83%）落在 D04_LOP_R_p3。T5d 的輸入在小葉那塊、輸出在 D04_LOP_R_p2，收和送的突觸合起來算，超過 80% 落在這兩塊裡，所以成了這組聯集的住戶；那 1 顆 T5c 是例外，它的輸出剛好偏向 D04_LOP_R_p2。</li>
+<li><b>左視葉 5 塊</b>（小葉、髓質各一塊，小葉板三塊），r10、r20、r30 都有。r20 有 3,206 顆住戶，其中 3,119 顆是 T5 或 T4（T4 的樹突在髓質、軸突同樣送到小葉板）。r20 時被切成 3 個子區、算 3 個 LPU。</li>
+<li><b>右視葉 4 塊</b>（上面右視葉那組再加髓質、小葉板各一塊），只在 r10 出現，同樣以 T4、T5 為主（1,842 顆中 1,707 顆）。</li>
+</ul>
+這些聯集照規則仍判為 LPU，之後也照常切分：例如右視葉那組在 r20 被切成 2 個子區、算 2 個 LPU。這一刀不是把小葉和小葉板分回去，而是沿上下方向把整片切成兩半，每一半都同時含兩區的一部分，T5 的收和送大多落在同一半。
+<b>為什麼列為問題</b>：LPU 原本是「有自己一群局部神經元、在區內處理訊號」的單位；這裡的住戶是把訊號從小葉送到小葉板的投射神經元，靠併區才被算成局部神經元。蕈狀體的 Kenyon 細胞也是一頭收（萼）、一頭送（葉），但萼、柄、葉傳統上合稱一個結構，併回去符合解剖分區；小葉與小葉板則是兩個不同的視葉區。規則本身分不出這兩種情形。研究者裁示判定規則不改，這三組照算 LPU、計數不變，只在結果報告與實驗室的腦區瀏覽網頁（brain_division，另一個網站）加註記。</li>
+<li><b>邊界法 200 區</b>（2026-11-03 加入）。同事的新分區。這裡的密度是指每一小塊體積裡有多少突觸。舊做法（65 區）找密度的「高峰」（比四周都密的中心），每個高峰長成一區；比四周稀疏的結構沒有自己的高峰，就被併進旁邊的區。新做法改找密度「變化最劇烈」的地方當邊界：一個稀疏結構被密的組織包圍時，從密走到疏的交界處密度會突然下降，這一圈交界就成了邊界，所以前腦橋 PB（腦後方中央的橫條狀結構）、蕈狀體的葉這類較稀疏的結構也切得出來；為了切出這些小結構，區數變多，共 200 區。以下「r10／r20／r30」指 reach 門檻 10／20／30 µm。r20 下腦 LPU 49 個，介於 65 區（31）與 283 塊（58）之間；49 個裡視葉（上面說過，腦兩側處理視覺的部分）佔 26 個、其餘 23 個；65 區則是視葉 12 個、其餘 19 個，所以多出來的同樣主要在視葉。和另外兩套同事的分區不同的地方：
+<ul>
+<li><b>前腦橋 PB</b>（腦後方中央的橫條狀結構）：兩個以 PB 為主的區和兩個 IB 區在 r20 併成一組，41 顆 LN 中 38 顆是 Δ7（前腦橋自己的局部神經元），判為 LPU。65 區沒有以 PB 為主的區；283 塊的 PB 落在兩塊以母區取名的塊裡（D20_ICL_R_p2、D29_AVLP_L_p2，見上面主要結果表），r20 也併成一區。r30 時這組多收了一個 SPS_L 區（63 顆 LN，其中 42 顆 Δ7）。</li>
+<li><b>蕈狀體</b>：r10 下萼與 γ 葉的區都是 hub。r20 下萼的區仍是 hub；有一組聯集收了右側 SMP 兩區、CRE_R、LAL_R 和兩個 γ 葉區（其中 E121_gL_L 靠近中線，這區的突觸只有 45% 落在官方的左側 γ 葉）。這組的 204 顆 LN 中沒有 Kenyon 細胞（蕈狀體的主要神經元）；最大的一群是 PAM 神經元 83 顆（41%；一群釋放多巴胺、與學習有關的神經元，在 SMP／CRE 收訊號、把軸突送到蕈狀體的葉），其餘多是 SMP、CRE 一帶的型別。所以這組有一部分是投射路徑的頭和尾（投射路徑的意思見上面那一條），不是蕈狀體本身。r30 這組再收進右側兩個萼區和另兩個右側 γ 葉區（LAL_R 則改屬下面嗅葉那組；一區同時只屬於一組），651 顆 LN 中 404 顆是 Kenyon 細胞，但這只是右側 Kenyon 細胞（共 2,045 顆）的兩成：Kenyon 細胞依軸突伸進哪種葉分成 γ、α′β′、αβ 三類，進來的是 γ 類 274 顆（右側共 764 顆）、α′β′ 類 128 顆（共 355 顆），各約佔該類三分之一；人數最多的 αβ 類（共 925 顆）只有 1 顆，另有 1 顆未分類。200 區只替 γ 葉和萼切出自己的區，柄與 α、β 葉落在本身已是 LPU 或被別組併走的區，αβ 類的突觸湊不到 80%。所以右側蕈狀體只有部分併成，不算完整的一區；左側三個門檻下都沒有併。</li>
+<li><b>橢圓體 EB</b>：被切成兩區，r30 時兩區併成一區，判為單一 LPU（112 顆 LN，都是 ER 神經元：EB 的主要內在神經元，分支在 EB 裡繞成環狀）；r10、r20 兩區都是 hub。<b>扇形體 FB</b> 三個門檻下都是完整的一區、單一 LPU（r20 有 871 顆 LN）。</li>
+<li><b>嗅葉</b>：被切成 11 個以 AL 命名的區，每區單獨判定時三個門檻下都是 hub（每區 LN 0–2 顆）。r30 時右側其中 4 塊被併進一個大聯集；這個聯集共 11 區＝這 4 塊嗅葉＋7 個其他區（PLP_R、WED_R 兩區、LAL_R 兩區、SPS_R、SAD），併成時有 514 顆 LN，之後切成 2 個子區，各算 1 個 LPU（切開後每個子區重判 LN，跨兩個子區的神經元在哪一邊都不到 80%，所以兩子區合計比 514 少）。其中一個子區蓋住官方右嗅葉的 79%，它的 146 顆 LN 裡，有 114 顆正是正式 80 區在同一門檻 r30 下右嗅葉的 LN（共 123 顆；上面寫的 117 顆是 r20），以嗅葉自己的局部神經元（lLN、vLN 等型別）為主；所以右嗅葉在 r30 等於經「先併、再切」重新成為 1 個 LPU。另一個子區（189 顆 LN）在 WED、SAD 一帶，以這兩區的型別為主，和嗅葉無關。左側嗅葉三個門檻下都沒有 LPU。</li>
+<li><b>投射路徑</b>同樣出現：右髓質＋右小葉板那組（E079_ME_R＋E050_LOP_R，三個門檻都有）的 LN 是 T4（樹突在髓質、軸突送到小葉板，見上面「投射路徑」）；r10 的 AOTU_R＋LAL_R 那組 48 顆 LN 全是 TuBu。TuBu 是投射神經元，在 AOTU 收訊號、送到官方腦區 BU（一個很小的腦區）；這套分區裡沒有一區以 BU 為主，官方右側 BU 約三成落在 LAL_R 區裡，所以 TuBu 的兩頭落在 AOTU_R 與 LAL_R。</li>
+<li><b>碎塊</b>（同事的說明把突觸少於 5,000 的區稱為切割留下的碎片）：200 區中有 41 區，都在腦的最外緣：14 區對應視網膜板 LA，另 27 區名稱寫成 AB_L，位置幾乎都在官方 80 區的範圍之外。照原樣使用、沒有先併進鄰區（283 塊的小塊也是照原樣使用），結果沒有一個成為 LPU。</li>
+<li><b>聯集數</b>：r10／r20／r30 依序併出 8／10／12 個聯集，三個門檻之間最多差 4 個，變動幅度比另外三套（最多差 2 個）大。</li>
+</ul></li>
+<li><b>跨中線的大聯集</b>：80 區 r20 的 IB 群有 7 區、跨左右（r30 時 9 區）；CRE_R＋LAL_R 在 r20 收進了腦中央的橢圓體 EB。單側的區收進跨中線的結構、一個聯集橫跨左右多區，解剖上不太像一個處理單元，列為待觀察。</li>
+</ul>
+
+<h3>第二版事先登錄的預測</h3>
+<table>
+<tr><th>預測</th><th>結果</th></tr>
+<tr><td>283 塊的腦 LPU 數在 65 區的 ±50% 內（r20）</td><td>不成立：58 對 31（原因見上，視葉）</td></tr>
+<tr><td>80 區兩側蕈狀體各算 1 個 LPU（r20）</td><td>成立</td></tr>
+<tr><td>283 塊扇形體 7 層的聯集判為 LPU（r20）</td><td>成立：單一 LPU</td></tr>
+<tr><td>r10 與 r30 下，80 區兩側蕈狀體也都 7 件到齊</td><td>成立</td></tr>
+<tr><td>三套分區的聯集數在三個門檻之間最多差 2 個</td><td>成立：80 區 6／6／4、65 區 2／1／0、283 塊 6／5／5</td></tr>
+</table>
+<p>和上面第二版的做法一樣，邊界法 200 區也在計算之前先寫下（登錄）五條預測，算完再對照，避免看了結果才找解釋。前四條用 r20 的結果判定，第五條比較三個門檻：</p>
+<table>
+<tr><th>預測</th><th>結果</th></tr>
+<tr><td>腦 LPU 數介於 65 區與 283 塊之間</td><td>成立：49（65 區 31、283 塊 58）</td></tr>
+<tr><td>41 個突觸少於 5,000 的碎塊沒有一個成為 LPU</td><td>成立</td></tr>
+<tr><td>蕈狀體沒有併成同時含萼與 γ 葉的 LPU</td><td>成立（依登錄時約定的 r20 判定）。附註：若改用 r30 判定，字面上不成立：右側萼與 γ 葉併進了同一組 LPU 聯集。但那組只收到右側 Kenyon 細胞的兩成，不算完整的蕈狀體（見上面「蕈狀體」）</td></tr>
+<tr><td>兩個前腦橋區至少一個是 LPU，或在 LPU 聯集裡</td><td>成立：兩區併在同一個聯集裡，這個聯集判為 LPU（LN 以 Δ7 為主）</td></tr>
+<tr><td>聯集數在三個門檻之間最多差 2 個</td><td>不成立：r10／r20／r30 依序 8／10／12 個，最多差 4 個</td></tr>
+</table>
+
+<h3>和第一版比</h3>
+<p>第一版（同日稍早）用同一套 LN 規則，但併區是「住戶多的先併」，也沒有相鄰條件。它的 r20 腦 LPU 是 80 區 39、65 區 31、283 塊 59；80 區併出的聯集在 r10／r20／r30 是 6／10／9 個，組合隨門檻變動很大；蕈狀體只併了萼＋柄＋α＋β 四件，右側住戶 183 顆、左側 31 顆；AOTU＋BU 這種投射路徑被併成一區。第二版加了四條併區規則：(1) 聯集的成員要在組織上相連；(2) 一顆神經元只能是一個聯集的住戶，就是它的候選正好等於的那一組；(3) 候選彼此搶同一個 hub 時，hub 投給住戶最多的候選，候選要拿到所有 hub 成員的票才併（互選）；(4) 第一輪落選、但和已併聯集共用成員的 hub，之後可以再併進那個聯集（輸家歸隊）。結果：聯集數在三個門檻間最多差 2 個；兩側蕈狀體 7 件到齊（左右住戶 222 與 243 顆，不再差 6 倍；腦是左右對稱的，差太多表示規則有偏差）；AOTU＋BU 因為兩區不相鄰而不再被併。投射路徑沒有完全消失（283 塊視葉的幾組聯集，見上）。</p>
+
+<h3>已知限制</h3>
+<ul>
+<li>只做 MaleCNS；FlyWire（另一套電顯資料）的密度模板是 77 區與 240 塊，比對要另外設計。</li>
+<li>蕈狀體整區算 1 個 LPU，分不出 αβ、α′β′、γ 三類 Kenyon 細胞。</li>
+<li>右側 γ 型 Kenyon 細胞在 CRE（緊鄰 γ 葉的腦區）的突觸比例（中位 6.7%）遠高於左側（0.2%），應是官方標籤右側邊界位置不同。因此右側 γ 型 Kenyon 細胞的候選多含 CRE，不正好等於蕈狀體的那幾件，右側 γ 葉第一輪沒能併進蕈狀體，要靠上面第 (4) 條「輸家歸隊」才併回去（併區是一輪一輪做的，見判定規則 4.4）；結果正確，但依賴這條補救規則。</li>
+<li>投射路徑的頭和尾可能被併成一區、照規則算成 LPU（見上面「投射路徑」）。曾考慮加一條「住戶在聯集的每一區都要既收又送」來擋：T5 在小葉只收、在小葉板只送，就會被擋下；但同一條也會擋到蕈狀體（Kenyon 細胞在萼主要收、在葉主要送）。研究者裁示不加這條，目前只加註記。</li>
+<li>規則原則上一律看突觸，只有 reach 用骨架形狀量：它要擋的正是「分支伸很遠、但那裡突觸很少」的神經元，只看突觸會漏掉。</li>
+</ul>
+
+<h3>腦區縮寫</h3>
+<table>
+<tr><th>縮寫</th><th>英文名</th><th>縮寫</th><th>英文名</th></tr>
+<tr><td>AL</td><td>antennal lobe（嗅葉）</td><td>LH</td><td>lateral horn（側角）</td></tr>
+<tr><td>AOTU</td><td>anterior optic tubercle</td><td>LO</td><td>lobula（小葉，視葉）</td></tr>
+<tr><td>AVLP</td><td>anterior ventrolateral protocerebrum</td><td>LOP</td><td>lobula plate（小葉板，視葉）</td></tr>
+<tr><td>BU</td><td>bulb</td><td>ME</td><td>medulla（髓質，視葉）</td></tr>
+<tr><td>CA、PED</td><td>calyx（萼）、pedunculus（柄），蕈狀體</td><td>PB</td><td>protocerebral bridge（前腦橋）</td></tr>
+<tr><td>CRE</td><td>crepine</td><td>PLP</td><td>posterior lateral protocerebrum</td></tr>
+<tr><td>EB</td><td>ellipsoid body（橢圓體）</td><td>PVLP</td><td>posterior ventrolateral protocerebrum</td></tr>
+<tr><td>FB</td><td>fan-shaped body（扇形體）</td><td>SCL</td><td>superior clamp</td></tr>
+<tr><td>GNG</td><td>gnathal ganglia</td><td>SIP、SMP、SLP</td><td>superior intermediate／medial／lateral protocerebrum</td></tr>
+<tr><td>IB</td><td>inferior bridge</td><td>SPS、IPS</td><td>superior／inferior posterior slope</td></tr>
+<tr><td>ICL</td><td>inferior clamp</td><td>WED</td><td>wedge</td></tr>
+<tr><td>LA</td><td>lamina（視網膜板，視葉最外層）</td><td>Ov、LTct、IntTct、NTct、HTct</td><td>腹神經索的區：ovoid、lower／intermediate／neck／haltere tectulum</td></tr>
+<tr><td>LAL</td><td>lateral accessory lobe</td><td>MB_aL、bL、apL、bpL、gL</td><td>蕈狀體的 α、β、α′、β′、γ 葉</td></tr>
+<tr><td>AB</td><td>asymmetrical body</td><td>SAD</td><td>saddle</td></tr>
+<tr><td>AME</td><td>accessory medulla（副髓質）</td><td>VES、FLA</td><td>vest、flange</td></tr>
+<tr><td>NO</td><td>noduli</td><td>gL（200 區）</td><td>蕈狀體 γ 葉（200 區的區名用官方簡寫）</td></tr>
+</table>
+<p class="small">區名後綴 _L、_R 表示左、右側；沒有後綴的區（如 IB、FB、EB）跨中線只有一個。密度模板的區名前加編號（如 D53_ME_L），283 塊再加 _p 編號（如 D53_ME_L_p8）；邊界法 200 區以 E 加三位數編號開頭，後面是突觸最多落在的官方區（如 E079_ME_R）。</p>
+
+<h3>資料來源與檔案</h3>
+<p class="small">MaleCNS v1.0（Janelia FlyEM）；密度模板 65 區、283 塊與邊界法 200 區由同事提供；計算程式與完整紀錄在實驗室主機 <code>CMU_research/A1_syn/</code>（第二版在 <code>v2/</code>；200 區在 <code>CMU_research/A1_syn_200/</code>，規則與程式同第二版）。網頁資料由 <code>web/build/export_data.py</code> 產生：腦區形狀是標籤體積以 marching cubes 轉成的簡化網格；LN 骨架預設每區隨機抽樣最多 20 顆（固定種子）並簡化節點；切成「全部」時每區打包成一個檔，骨架節點吸附到 4 µm 格子上（同一格合成一點）；畫之前先略去判 LN 時量 reach 前扣掉的那一段（判定規則 2.2：從胞體到第一個「側枝在別區有突觸」的分枝點，找不到就到家為止，連同這段上的側枝）。同一顆神經元在不同分區下的家可能不同；reach 門檻會影響哪些區併成聯集，所以不同門檻下家也可能不同，扣掉的部分跟著不同。</p>
+</div></section>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+"use strict";
+const KEYS = ["80","65","283","200"], TS = ["10","20","30"];
+const ALABEL = {"80":"正式 80 區","65":"密度模板 65 區","283":"密度模板 283 塊","200":"邊界法 200 區"};
+const BUCKET = {single:"單一 LPU", multi:"多個候選（整區 1 個 LPU）", hub:"hub", neither:"兩者皆非"};
+let J = null, cur = {a:"80", t:"20", sel:null, multi:[], c:"region"};   // sel：卡片顯示的區（最後點的）；multi：所有選取的區（含 sel，Shift＋點加選）
+const meshBuf = {}, geoCache = {};
+
+// ---------- 主題 ----------
+const root = document.documentElement;
+document.getElementById("themeBtn").onclick = () => {
+  const dark = root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  root.dataset.theme = dark ? "light" : "dark";
+  try { localStorage.setItem("a1syn-theme", root.dataset.theme); } catch (e) {}
+  applyTheme();
+};
+try { const t = localStorage.getItem("a1syn-theme"); if (t) root.dataset.theme = t; } catch (e) {}
+const css = n => getComputedStyle(root).getPropertyValue(n).trim();
+
+// ---------- 分頁 ----------
+document.querySelectorAll("#tabs button").forEach(b => b.onclick = () => showPage(b.dataset.p));
+function showPage(p){
+  document.querySelectorAll("#tabs button").forEach(x => x.classList.toggle("on", x.dataset.p === p));
+  document.querySelectorAll("section.page").forEach(s => s.classList.toggle("on", s.id === "p-" + p));
+  if (p === "view") resize();
+  writeHash();
+}
+
+// ---------- three.js ----------
+const stage = document.getElementById("stage");
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+stage.appendChild(renderer.domElement);
+renderer.domElement.addEventListener("webglcontextlost", e => e.preventDefault());
+renderer.domElement.addEventListener("webglcontextrestored", () => render());
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(35, 1, 1, 20000);
+scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+const dl = new THREE.DirectionalLight(0xffffff, 0.6); scene.add(dl);
+const dl2 = new THREE.DirectionalLight(0xffffff, 0.25); scene.add(dl2);
+const regionGroup = new THREE.Group(), neuronGroup = new THREE.Group(); scene.add(regionGroup); scene.add(neuronGroup);
+let outline = null;
+// 管線座標：x 左右（右側在 −x）、y 背腹（背側 −y）、z 前後（前方 −z）
+const UP = new THREE.Vector3(0,-1,0);
+const orbit = {target:new THREE.Vector3(0,-150,250), dist:1500, theta:Math.PI, phi:Math.PI/2};
+function placeCam(){
+  // 以 target 為中心的球座標；theta 繞背腹軸、phi 從背側量起
+  const s = Math.sin(orbit.phi);
+  const off = new THREE.Vector3(s*Math.sin(orbit.theta), -Math.cos(orbit.phi), s*Math.cos(orbit.theta)).multiplyScalar(orbit.dist);
+  camera.position.copy(orbit.target).add(off);
+  camera.up.copy(UP);
+  camera.lookAt(orbit.target);
+  dl.position.copy(camera.position); dl2.position.copy(orbit.target).sub(off);
+}
+const VIEWS = {front:[Math.PI, Math.PI/2], back:[0, Math.PI/2], top:[Math.PI, 0.02], side:[Math.PI/2, Math.PI/2]};
+document.querySelectorAll(".views button").forEach(b => b.onclick = () => { [orbit.theta, orbit.phi] = VIEWS[b.dataset.v]; placeCam(); render(); });
+let drag = null;
+renderer.domElement.addEventListener("pointerdown", e => { drag = {x:e.clientX, y:e.clientY, b:e.button, moved:false}; renderer.domElement.setPointerCapture(e.pointerId); });
+renderer.domElement.addEventListener("pointermove", e => {
+  if (!drag) { hover(e); return; }
+  const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+  if (Math.abs(dx) + Math.abs(dy) > 3) drag.moved = true;
+  drag.x = e.clientX; drag.y = e.clientY;
+  if (drag.b === 2 || e.shiftKey) {
+    const k = orbit.dist / 900;
+    const right = new THREE.Vector3().setFromMatrixColumn(camera.matrix, 0), up = new THREE.Vector3().setFromMatrixColumn(camera.matrix, 1);
+    orbit.target.addScaledVector(right, -dx*k).addScaledVector(up, dy*k);
+  } else {
+    orbit.theta -= dx * 0.008;
+    orbit.phi = Math.min(Math.PI - 0.02, Math.max(0.02, orbit.phi - dy * 0.008));
+  }
+  placeCam(); render();
+});
+renderer.domElement.addEventListener("pointerup", e => { if (drag && !drag.moved) pick(e); drag = null; });
+renderer.domElement.addEventListener("contextmenu", e => e.preventDefault());
+renderer.domElement.addEventListener("wheel", e => { e.preventDefault(); orbit.dist *= Math.exp(e.deltaY * 0.001); orbit.dist = Math.min(6000, Math.max(150, orbit.dist)); placeCam(); render(); }, {passive:false});
+// 兩指縮放
+const touches = new Map();
+renderer.domElement.addEventListener("touchstart", e => { for (const t of e.changedTouches) touches.set(t.identifier, t); }, {passive:true});
+renderer.domElement.addEventListener("touchmove", e => {
+  if (e.touches.length === 2) {
+    const [a, b] = e.touches, pa = touches.get(a.identifier), pb = touches.get(b.identifier);
+    if (pa && pb) { const d0 = Math.hypot(pa.clientX-pb.clientX, pa.clientY-pb.clientY), d1 = Math.hypot(a.clientX-b.clientX, a.clientY-b.clientY); if (d1 > 0) { orbit.dist *= d0/d1; placeCam(); render(); } }
+    drag = null;
+  }
+  for (const t of e.changedTouches) touches.set(t.identifier, t);
+}, {passive:true});
+renderer.domElement.addEventListener("touchend", e => { for (const t of e.changedTouches) touches.delete(t.identifier); }, {passive:true});
+
+function resize(){ const w = stage.clientWidth, h = stage.clientHeight; if (!w || !h) return; renderer.setSize(w, h); camera.aspect = w/h; camera.updateProjectionMatrix(); render(); }
+addEventListener("resize", resize);
+let raf = 0;
+function render(){ if (raf) return; raf = requestAnimationFrame(() => { raf = 0; renderer.render(scene, camera); }); }
+
+// ---------- 資料 ----------
+async function loadBin(url){ const r = await fetch(url); if (!r.ok) throw new Error(url); return r.arrayBuffer(); }
+function meshGeo(a, idx){
+  const key = a + ":" + idx; if (geoCache[key]) return geoCache[key];
+  const m = J.atlases[a].meshes[idx], buf = meshBuf[a];
+  const pos = new Float32Array(buf, m.off, m.nv*3);
+  const ind = new Uint32Array(buf, m.off + m.nv*12, m.nf*3);
+  const g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+  g.setIndex(new THREE.BufferAttribute(ind, 1));
+  g.computeVertexNormals();
+  return geoCache[key] = g;
+}
+const rows = () => J.atlases[cur.a].combos[cur.t].rows;
+const isLPU = r => r.bucket === "single" || r.bucket === "multi";
+function palColor(i){ const h = (i * 0.618034) % 1; return new THREE.Color().setHSL(h, 0.62, [0.52, 0.42, 0.62][i % 3]); }
+const byRegion = () => cur.c === "region";
+function baseColor(r, i){
+  if (isLPU(r) && byRegion()) return palColor(i);
+  return new THREE.Color(css("--" + r.bucket));
+}
+function dispName(r){
+  if (r.members && r.members.length > 1 && r.kind !== "子區") return r.name + "＋" + (r.members.length - 1) + " 區（聯集）";
+  return r.name;
+}
+
+let meshes = [];
+function buildScene(){
+  for (const m of meshes) { regionGroup.remove(m); m.material.dispose(); }
+  meshes = [];
+  const showHub = document.getElementById("cHub").checked, showVnc = document.getElementById("cVnc").checked;
+  let li = 0;
+  rows().forEach((r, i) => {
+    if (r.mesh == null) return;
+    if (!showVnc && r.part !== "腦") return;
+    const lpu = isLPU(r); if (!lpu && !showHub) return;
+    const col = baseColor(r, lpu ? li++ : 0);
+    const mat = new THREE.MeshLambertMaterial({color:col, transparent:true, opacity: lpu ? 0.78 : 0.16, depthWrite: lpu, side:THREE.DoubleSide});
+    const m = new THREE.Mesh(meshGeo(cur.a, r.mesh), mat);
+    m.userData = {row:r, base:col.clone(), op:mat.opacity};
+    meshes.push(m); regionGroup.add(m);
+  });
+  if (outline) outline.visible = document.getElementById("cOut").checked;
+  highlight(); stats(); legend(); render();
+}
+function highlight(){
+  const sel = cur.sel, ms = new Set(cur.multi);
+  for (const m of meshes) {
+    const nm = m.userData.row.name, focus = sel && nm === sel, on = sel && ms.has(nm);
+    m.material.color.copy(focus ? new THREE.Color(css("--sel")) : m.userData.base);
+    m.material.opacity = sel ? (on ? 0.42 : Math.min(m.userData.op, isLPU(m.userData.row) ? 0.07 : 0.04)) : m.userData.op;
+    m.material.depthWrite = !sel && isLPU(m.userData.row);
+    m.renderOrder = on ? 2 : 0;
+  }
+}
+function stats(){
+  const R = rows(), b = R.filter(r => r.part === "腦"), v = R.filter(r => r.part !== "腦");
+  const c = arr => ({lpu: arr.filter(isLPU).length, single: arr.filter(r => r.bucket==="single").length, multi: arr.filter(r => r.bucket==="multi").length, hub: arr.filter(r => r.bucket==="hub").length, nei: arr.filter(r => r.bucket==="neither").length});
+  const cb = c(b), cv = c(v), un = J.atlases[cur.a].combos[cur.t].unions.length;
+  document.getElementById("stat").innerHTML = `<b>${ALABEL[cur.a]}・reach ${cur.t} µm</b><br>腦：LPU ${cb.lpu}（單一 ${cb.single}＋多個候選 ${cb.multi}）、hub ${cb.hub}、兩者皆非 ${cb.nei}<br>腹神經索：LPU ${cv.lpu}・併出的聯集 ${un} 個`;
+}
+function legend(){
+  const pal = byRegion();
+  document.getElementById("legend").innerHTML = (pal ? `<div>依區上色：每個 LPU 一種顏色</div><div class="muted">判定類別見右側卡片與左側清單</div>` :
+    `<div><span class="dot" style="background:${css("--single")}"></span>單一 LPU</div><div><span class="dot" style="background:${css("--multi")}"></span>多個候選（整區 1 個 LPU）</div>`) +
+    (document.getElementById("cHub").checked ? `<div><span class="dot" style="background:${css("--hub")}"></span>hub（淡）</div><div><span class="dot" style="background:${css("--neither")}"></span>兩者皆非（淡）</div>` : "") +
+    `<div><span class="dot" style="background:${css("--sel")}"></span>選取中（卡片顯示的那一區）</div>` + (cur.multi.length > 1 ? `<div class="muted">其他已選的區：原色、較不透明</div>` : "");
+}
+function listUI(){
+  const q = document.getElementById("search").value.trim().toLowerCase();
+  const R = rows().filter(r => !q || r.name.toLowerCase().includes(q) || (r.members||[]).join(" ").toLowerCase().includes(q));
+  const groups = [["腦：LPU", R.filter(r => r.part==="腦" && isLPU(r))], ["腹神經索：LPU", R.filter(r => r.part!=="腦" && isLPU(r))], ["hub 與兩者皆非", R.filter(r => !isLPU(r))]];
+  let h = "", li = 0;
+  const pal = byRegion();
+  const lpuIndex = new Map(); rows().forEach(r => { if (r.mesh != null && isLPU(r)) lpuIndex.set(r.name, lpuIndex.size); });
+  for (const [g, arr] of groups) {
+    if (!arr.length) continue;
+    h += `<div class="grp">${g}（${arr.length}）</div>`;
+    for (const r of arr.slice().sort((a,b) => a.name.localeCompare(b.name))) {
+      const col = pal && isLPU(r) && lpuIndex.has(r.name) ? "#" + palColor(lpuIndex.get(r.name)).getHexString() : css("--" + r.bucket);
+      const tag = pal && isLPU(r) ? `<span class="small muted">${r.bucket === "single" ? "單一" : "多候選"}</span>` : "";
+      h += `<div class="item${cur.multi.includes(r.name)?" sel":""}" data-n="${r.name}"><span class="dot" style="background:${col}"></span>${esc(dispName(r))} ${tag}<span class="n">${r.n_ln}</span></div>`;
+    }
+  }
+  const L = document.getElementById("list"); L.innerHTML = h || `<p class="muted small">沒有符合的區</p>`;
+  L.querySelectorAll(".item").forEach(x => x.onclick = ev => select(x.dataset.n, !ev.shiftKey, ev.shiftKey));
+}
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+// ---------- 選取與卡片 ----------
+const ray = new THREE.Raycaster();
+function hitAt(e){
+  const rc = renderer.domElement.getBoundingClientRect();
+  const p = new THREE.Vector2(((e.clientX-rc.left)/rc.width)*2-1, -((e.clientY-rc.top)/rc.height)*2+1);
+  ray.setFromCamera(p, camera);
+  const hits = ray.intersectObjects(meshes, false);
+  const lp = hits.find(h => isLPU(h.object.userData.row));
+  return (lp || hits[0] || {}).object;
+}
+function pick(e){ const o = hitAt(e); if (!o && e.shiftKey) return; select(o ? o.userData.row.name : null, false, e.shiftKey); }
+const tip = document.getElementById("tip");
+function hover(e){
+  const o = hitAt(e);
+  if (!o) { tip.style.display = "none"; return; }
+  const r = o.userData.row, rc = stage.getBoundingClientRect();
+  tip.innerHTML = `${esc(dispName(r))}・${BUCKET[r.bucket]}・LN ${r.n_ln}`;
+  tip.style.left = (e.clientX - rc.left + 12) + "px"; tip.style.top = (e.clientY - rc.top + 12) + "px"; tip.style.display = "block";
+}
+function select(name, focus, add){
+  // 不按 Shift：只選這一區；按 Shift：加選（已選的再按一次 Shift＋點就取消）
+  if (!add || !name) { cur.multi = name ? [name] : []; cur.sel = name; }
+  else if (!cur.multi.includes(name)) { cur.multi.push(name); cur.sel = name; }
+  else { cur.multi = cur.multi.filter(x => x !== name); if (cur.sel === name) cur.sel = cur.multi[cur.multi.length - 1] || null; }
+  highlight(); legend(); listUI(); card(); drawNeurons();
+  if (focus && name) {
+    const r = rows().find(x => x.name === name);
+    if (r && r.mesh != null) { const c = J.atlases[cur.a].meshes[r.mesh].c; orbit.target.set(c[0], c[1], c[2]); orbit.dist = Math.max(500, Math.min(1500, Math.cbrt(r.nvox) * 9)); placeCam(); }
+  }
+  render(); writeHash();
+}
+function card(){
+  const el = document.getElementById("card");
+  const r = cur.sel && rows().find(x => x.name === cur.sel);
+  if (!r) { el.innerHTML = `<p class="muted">點選 3D 圖或左側清單裡的區，這裡會顯示它的判定、LN 數、組成與抽樣的 LN 骨架。按住 Shift 再點可以加選好幾區一起顯示。</p>`; return; }
+  let chips = "";
+  if (cur.multi.length > 1) chips = `<div class="small muted" style="margin-bottom:4px">已選 ${cur.multi.length} 區（點名字＝換成卡片顯示那一區；× 取消；不按 Shift 直接點一區就回到單選）</div><div class="chips">` +
+    cur.multi.map(n => { const x = rows().find(y => y.name === n); return `<span class="chip${n === cur.sel ? " on" : ""}" data-n="${esc(n)}">${esc(x ? dispName(x) : n)}<b class="x" data-n="${esc(n)}">×</b></span>`; }).join("") + `</div>`;
+  const kindTxt = {"子區":"切分後的子區（母區 " + r.parent + " 全切開，每個子區都有自己的 LN）", "母區整區":"母區整區（切分結果：" + r.fate + "，依讀法 A 整區算 1 個 LPU）", "沒切":"未切分"}[r.kind] || r.kind;
+  let h = chips + `<h2>${esc(dispName(r))}</h2><span class="badge" style="background:${css("--" + r.bucket)}">${BUCKET[r.bucket]}</span> <span class="small muted">${r.part}</span>`;
+  h += `<table><tr><td>管線判定</td><td>${esc(r.verdict)}</td></tr><tr><td>LN 數</td><td>${r.n_ln.toLocaleString()} 顆</td></tr><tr><td>以此區為端點的神經束 *</td><td>${r.n_tracts} 條</td></tr><tr><td>切分</td><td>${esc(kindTxt)}</td></tr>`;
+  if (r.nvox) h += `<tr><td>體積</td><td>${r.nvox.toLocaleString()} µm³</td></tr>`;
+  if (r.members && r.members.length > 1) h += `<tr><td>併區聯集成員（${r.members.length} 區）</td><td>${r.members.map(esc).join("、")}</td></tr>`;
+  if (r.n_home != null) h += `<tr><td>最後一步的住戶</td><td>${r.n_home} 顆</td></tr>`;
+  if (r.official) h += `<tr><td>與官方分區重疊最多</td><td>${r.official.map(o => esc(o[0]) + " " + Math.round(o[1]*100) + "%").join("、")}</td></tr>`;
+  h += `</table><p class="small muted" style="margin-top:2px">* 神經束：≥ 3 顆神經元走同一條路、兩端在同一對區（判定規則第 5 節）。</p>`;
+  if (r.types) {
+    h += `<h3>LN 的細胞型別（前 8 名，共 ${r.n_types} 型）</h3><table>` + r.types.map(t => `<tr><td>${esc(t[0])}</td><td>${t[1]} 顆</td></tr>`).join("") + `</table>`;
+  }
+  if (r.sample) {
+    const canAll = r.all && r.all > r.sample.length;
+    h += `<h3>LN 骨架（3D 圖中畫出）</h3>`;
+    if (canAll) h += `<div class="seg" id="segN" style="margin:4px 0 8px"><button data-v="0" class="${lnAll ? "" : "on"}">抽樣 ${r.sample.length} 顆</button><button data-v="1" class="${lnAll ? "on" : ""}">全部 ${r.all.toLocaleString()} 顆</button></div><div class="small muted" id="neuStat"></div>`;
+    if (lnAll && canAll) {
+      h += `<p class="small muted">已畫出這一區全部 ${r.all.toLocaleString()} 顆 LN（局部神經元），每顆一種顏色。為了載得動，骨架比抽樣模式粗：節點吸附到 4 µm 的格子上，同一格合成一點。和抽樣模式一樣，從胞體到第一個「側枝在別區有突觸」的分枝點那一段不畫（判 LN 時量 reach 前就扣掉，見「判定規則」2.2）。下方名單只列抽樣的 ${r.sample.length} 顆，色條和圖中顏色不對應；想單獨亮一顆，請先切回「抽樣」。</p>`;
+    }
+    h += `<div id="neuList">` +
+      r.sample.map((s, i) => `<div class="neu" data-i="${i}"><span class="sw" style="background:#${neuColor(i).getHexString()}"></span>${s[0]}・${esc(s[1])}<span class="muted">${esc(s[2]||"")}</span></div>`).join("") + `</div>`;
+    if (!(lnAll && canAll)) h += `<p class="small muted">預設每區隨機抽最多 20 顆（固定種子，每次相同）${canAll ? "，上方可切換成畫全部" : ""}；骨架已簡化。從胞體到第一個「側枝在別區有突觸」的分枝點那一段（連同這段上的側枝）不畫，因為判 LN 時量 reach 前就扣掉了（見「判定規則」2.2），所以有些骨架看起來從分枝點開始、和胞體斷開，這是刻意的。點名字只亮那一顆。</p>`;
+  } else if (!isLPU(r)) {
+    h += `<p class="small muted">${r.bucket === "hub" ? "hub：LN 不到 10 顆，但有長程神經束以此區為端點。" : "兩者皆非：LN 不到 10 顆，也沒有長程神經束。"}</p>`;
+  }
+  el.innerHTML = h;
+  el.querySelectorAll(".neu").forEach(x => x.onclick = () => { if (!lnAll) soloNeuron(+x.dataset.i); });
+  el.querySelectorAll(".chip").forEach(x => x.onclick = ev => { if (ev.target.classList.contains("x")) return; cur.sel = x.dataset.n; highlight(); listUI(); card(); soloNeuron(-2); render(); writeHash(); });
+  el.querySelectorAll(".chip .x").forEach(x => x.onclick = () => select(x.dataset.n, false, true));
+  el.querySelectorAll("#segN button").forEach(b => b.onclick = () => { const v = b.dataset.v === "1"; if (v === lnAll) return; lnAll = v; card(); drawNeurons(); });
+}
+function neuColor(i){ return new THREE.Color().setHSL((i*0.137 + 0.05) % 1, 0.75, 0.42); }
+let neuToken = 0, solo = -1, lnAll = false;   // lnAll：畫這一區全部 LN（預設只畫抽樣 20 顆）
+async function drawNeurons(){
+  const tok = ++neuToken; solo = -1;
+  while (neuronGroup.children.length) { const c = neuronGroup.children.pop(); c.geometry.dispose(); c.material.dispose(); }
+  const regs = cur.multi.map(n => rows().find(x => x.name === n)).filter(r => r && r.sample);
+  if (!regs.length) { render(); return; }
+  await Promise.all(regs.map(r => (lnAll && r.all) ? drawAllLN(r, tok) : drawSample(r, tok)));
+}
+async function drawSample(r, tok){
+  await Promise.all(r.sample.map(async (s, i) => {
+    try {
+      const buf = await loadBin(`neurons/${s[3] || s[0]}.bin`);   // s[3]：略去胞體與主幹後的骨架檔名（扣法不同檔名不同）
+      if (tok !== neuToken) return;
+      const n = new Uint32Array(buf, 0, 1)[0], xyz = new Float32Array(buf, 4, n*3), par = new Int32Array(buf, 4 + n*12, n);
+      const pos = [];
+      for (let k = 0; k < n; k++) { const p = par[k]; if (p < 0) continue; pos.push(xyz[3*k], xyz[3*k+1], xyz[3*k+2], xyz[3*p], xyz[3*p+1], xyz[3*p+2]); }
+      const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+      const l = new THREE.LineSegments(g, new THREE.LineBasicMaterial({color:neuColor(i), transparent:true, opacity:0.95, depthTest:false}));
+      if (tok !== neuToken || neuronGroup.children.some(c => c.userData.reg === r.name && c.userData.i === i)) { g.dispose(); l.material.dispose(); return; }   // 同一顆只畫一次
+      l.userData = {reg: r.name, i}; l.renderOrder = 5; neuronGroup.add(l); render();
+    } catch (e) { /* 單顆讀不到就略過 */ }
+  }));
+}
+async function drawAllLN(r, tok){
+  const st = r.name === cur.sel ? document.getElementById("neuStat") : null;
+  if (st) st.textContent = `載入 ${r.all.toLocaleString()} 顆骨架中…`;
+  let buf;
+  try {
+    const gz = await loadBin(`lnall/${cur.a}_r${cur.t}/${encodeURIComponent(r.name)}.bin.gz`);
+    buf = await new Response(new Blob([gz]).stream().pipeThrough(new DecompressionStream("gzip"))).arrayBuffer();
+    buf.gzBytes = gz.byteLength;
+  }
+  catch (e) { if (st) st.textContent = "讀不到全部 LN 的檔案。"; return; }
+  if (tok !== neuToken) return;
+  const hd = new Uint32Array(buf, 0, 3), nN = hd[0], nP = hd[1], nE = hd[2];
+  const ps = new Uint32Array(buf, 12, nN + 1), es = new Uint32Array(buf, 12 + (nN + 1) * 4, nN + 1);
+  const o1 = 12 + (nN + 1) * 8, dX = new Int16Array(buf, o1, nP * 3);   // 三個平面：dX、dY、dZ（與前一點的差）
+  const xyz = new Int32Array(nP * 3); let x = 0, y = 0, z = 0;
+  for (let k = 0; k < nP; k++) { x += dX[k]; y += dX[nP + k]; z += dX[2*nP + k]; xyz[3*k] = x; xyz[3*k+1] = y; xyz[3*k+2] = z; }
+  const eAB = new Uint16Array(buf, o1 + nP * 6, nE * 2);                  // 兩個平面：eA、eB
+  const pos = new Float32Array(nE * 6), col = new Float32Array(nE * 6); let m = 0;
+  for (let j = 0; j < nN; j++) {
+    const c = neuColor(j), b = ps[j];
+    for (let k = es[j]; k < es[j + 1]; k++) {
+      const a = 3 * (b + eAB[k]), q = 3 * (b + eAB[nE + k]);
+      pos[m] = xyz[a]; pos[m+1] = xyz[a+1]; pos[m+2] = xyz[a+2]; pos[m+3] = xyz[q]; pos[m+4] = xyz[q+1]; pos[m+5] = xyz[q+2];
+      col[m] = col[m+3] = c.r; col[m+1] = col[m+4] = c.g; col[m+2] = col[m+5] = c.b; m += 6;
+    }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.BufferAttribute(pos.subarray(0, m), 3));
+  g.setAttribute("color", new THREE.BufferAttribute(col.subarray(0, m), 3));
+  const l = new THREE.LineSegments(g, new THREE.LineBasicMaterial({vertexColors:true, transparent:true, opacity: nN > 2000 ? 0.35 : 0.8, depthTest:false}));
+  if (tok !== neuToken) { g.dispose(); l.material.dispose(); return; }
+  l.userData = {reg: r.name, i: -1}; l.renderOrder = 5; neuronGroup.add(l); render();
+  if (st) st.textContent = `已畫出 ${nN.toLocaleString()} 顆（下載 ${(buf.gzBytes / 1e6).toFixed(1)} MB）。`;
+}
+function soloNeuron(i){   // i ＝ −2：取消單獨顯示（切換卡片時）
+  solo = (i === -2 || solo === i) ? -1 : i;
+  for (const l of neuronGroup.children) { l.visible = solo < 0 || (l.userData.reg === cur.sel && l.userData.i === solo); }
+  render();
+}
+
+// ---------- 控制 ----------
+function seg(id, vals, lab, key){
+  const el = document.getElementById(id);
+  el.innerHTML = vals.map(v => `<button data-v="${v}">${lab(v)}</button>`).join("");
+  el.querySelectorAll("button").forEach(b => b.onclick = async () => { cur[key] = b.dataset.v; await refresh(); });
+}
+seg("segA", KEYS, v => ALABEL[v].replace("密度模板 ", "模板 "), "a");
+seg("segT", TS, v => v + " µm", "t");
+document.querySelectorAll("#segC button").forEach(b => b.onclick = () => { cur.c = b.dataset.v; segCUI(); buildScene(); listUI(); writeHash(); });
+function segCUI(){ document.querySelectorAll("#segC button").forEach(b => b.classList.toggle("on", b.dataset.v === cur.c)); }
+["cHub","cVnc","cOut"].forEach(id => document.getElementById(id).onchange = () => { buildScene(); listUI(); });
+document.getElementById("search").oninput = listUI;
+async function refresh(){
+  document.querySelectorAll("#segA button").forEach(b => b.classList.toggle("on", b.dataset.v === cur.a));
+  document.querySelectorAll("#segT button").forEach(b => b.classList.toggle("on", b.dataset.v === cur.t));
+  segCUI();
+  if (!meshBuf[cur.a]) { document.getElementById("stat").textContent = "載入網格中…"; meshBuf[cur.a] = await loadBin(`meshes/${cur.a}.bin`); }
+  cur.multi = cur.multi.filter(n => rows().find(r => r.name === n));
+  if (!cur.multi.includes(cur.sel)) cur.sel = cur.multi[cur.multi.length - 1] || null;
+  buildScene(); listUI(); card(); drawNeurons(); tableUI(); writeHash();
+}
+function applyTheme(){ scene.background = new THREE.Color(css("--canvas")); if (J) { buildScene(); listUI(); card(); } render(); }
+function writeHash(){
+  const p = document.querySelector("#tabs button.on").dataset.p;
+  history.replaceState(null, "", `#p=${p}&a=${cur.a}&t=${cur.t}&c=${cur.c}` + (cur.sel ? `&r=${encodeURIComponent([cur.sel, ...cur.multi.filter(n => n !== cur.sel)].join(","))}` : ""));
+}
+function readHash(){
+  const h = new URLSearchParams(location.hash.slice(1));
+  if (KEYS.includes(h.get("a"))) cur.a = h.get("a");
+  if (TS.includes(h.get("t"))) cur.t = h.get("t");
+  if (h.get("r")) { const rs = h.get("r").split(",").filter(Boolean); cur.sel = rs[0]; cur.multi = rs; }
+  if (["region","verdict"].includes(h.get("c"))) cur.c = h.get("c");
+  return h.get("p") || "view";
+}
+
+// ---------- 結果總表 ----------
+function countOf(a, t, part){
+  const R = J.atlases[a].combos[t].rows.filter(r => part === "腦" ? r.part === "腦" : r.part !== "腦");
+  return {lpu:R.filter(isLPU).length, single:R.filter(r=>r.bucket==="single").length, multi:R.filter(r=>r.bucket==="multi").length, hub:R.filter(r=>r.bucket==="hub").length, nei:R.filter(r=>r.bucket==="neither").length, n:R.length};
+}
+let tblFilter = {a:"80", t:"20", b:"lpu", q:""};
+function tableUI(){
+  if (!J) return;
+  let h = `<h2>四套分區 × 三個門檻的 LPU 數</h2><p>讀法 A 的最終清單。「多個候選」是密度分群數出不只一團、但沒有成功切開的區，整區算 1 個 LPU；所以 LPU ＝ 單一＋多個候選。聯集數含腹神經索。</p><div class="tblWrap"><table><tr><th>分區</th><th>reach</th><th class="num">腦 LPU</th><th class="num">單一</th><th class="num">多個候選</th><th class="num">hub</th><th class="num">兩者皆非</th><th class="num">腹神經索 LPU</th><th class="num">併出的聯集</th></tr>`;
+  for (const a of KEYS) for (const t of TS) {
+    const b = countOf(a, t, "腦"), v = countOf(a, t, "腹");
+    h += `<tr><td>${ALABEL[a]}</td><td>${t} µm</td><td class="num"><b>${b.lpu}</b></td><td class="num">${b.single}</td><td class="num">${b.multi}</td><td class="num">${b.hub}</td><td class="num">${b.nei}</td><td class="num">${v.lpu}</td><td class="num">${J.atlases[a].combos[t].unions.length}</td></tr>`;
+  }
+  h += `</table></div>`;
+  h += `<h2>併出的聯集</h2><div class="tblWrap"><table><tr><th>分區</th><th>reach</th><th>聯集（代表名＝成員）</th><th class="num">最後一步的住戶</th><th>最終判定</th></tr>`;
+  for (const a of KEYS) for (const t of TS) for (const u of J.atlases[a].combos[t].unions) {
+    const fr = J.atlases[a].combos[t].rows.filter(r => r.name === u.rep || r.parent === u.rep);
+    const v = fr.length ? fr.map(r => r.name + "：" + BUCKET[r.bucket]).join("；") : "—";
+    h += `<tr><td>${ALABEL[a]}</td><td>${t}</td><td>${u.members.map(esc).join("＋")}</td><td class="num">${u.n_home ?? ""}</td><td>${esc(v)}</td></tr>`;
+  }
+  h += `</table></div>`;
+  h += `<h2>每區明細</h2><div class="fbar"><label>分區 <select id="fA">${KEYS.map(a => `<option value="${a}">${ALABEL[a]}</option>`).join("")}</select></label><label>reach <select id="fT">${TS.map(t => `<option value="${t}">${t} µm</option>`).join("")}</select></label><label>判定 <select id="fB"><option value="lpu">只看 LPU</option><option value="all">全部</option><option value="single">單一</option><option value="multi">多個候選</option><option value="hub">hub</option><option value="neither">兩者皆非</option></select></label><input id="fQ" placeholder="搜尋區名"></div><div class="tblWrap"><table id="regTable"></table></div>`;
+  document.getElementById("tableDoc").innerHTML = h;
+  const fA = document.getElementById("fA"), fT = document.getElementById("fT"), fB = document.getElementById("fB"), fQ = document.getElementById("fQ");
+  fA.value = tblFilter.a; fT.value = tblFilter.t; fB.value = tblFilter.b; fQ.value = tblFilter.q;
+  const upd = () => { tblFilter = {a:fA.value, t:fT.value, b:fB.value, q:fQ.value.trim().toLowerCase()}; regTable(); };
+  [fA, fT, fB].forEach(x => x.onchange = upd); fQ.oninput = upd; regTable();
+}
+function regTable(){
+  const f = tblFilter;
+  const R = J.atlases[f.a].combos[f.t].rows.filter(r => (f.b === "all" || (f.b === "lpu" ? isLPU(r) : r.bucket === f.b)) && (!f.q || r.name.toLowerCase().includes(f.q)));
+  let h = `<tr><th>區</th><th>部位</th><th>最終判定</th><th>管線判定</th><th class="num">LN</th><th class="num">束</th><th>切分</th><th>聯集成員</th>${f.a !== "80" ? "<th>重疊最多的官方區</th>" : ""}<th>最多的 LN 型別</th><th></th></tr>`;
+  for (const r of R) {
+    h += `<tr><td>${esc(r.name)}</td><td>${r.part}</td><td>${BUCKET[r.bucket]}</td><td>${esc(r.verdict)}</td><td class="num">${r.n_ln}</td><td class="num">${r.n_tracts}</td><td>${esc(r.kind === "沒切" ? "未切分" : r.kind + (r.fate ? "（" + r.fate + "）" : ""))}</td><td>${r.members.length > 1 ? r.members.length + " 區" : ""}</td>${f.a !== "80" ? `<td>${(r.official||[]).slice(0,2).map(o => esc(o[0]) + " " + Math.round(o[1]*100) + "%").join("、")}</td>` : ""}<td>${(r.types||[]).slice(0,3).map(t => esc(t[0]) + "×" + t[1]).join("、")}</td><td>${r.mesh != null ? `<a href="#" data-n="${esc(r.name)}">3D</a>` : ""}</td></tr>`;
+  }
+  const T = document.getElementById("regTable"); T.innerHTML = h;
+  T.querySelectorAll("a[data-n]").forEach(x => x.onclick = async e => { e.preventDefault(); cur.a = f.a; cur.t = f.t; cur.sel = x.dataset.n; cur.multi = [x.dataset.n]; showPage("view"); await refresh(); select(x.dataset.n, true); });
+}
+
+// ---------- 啟動 ----------
+(async function(){
+  const page = readHash();
+  scene.background = new THREE.Color(css("--canvas"));
+  J = await (await fetch("data/a1syn.json")).json();
+  try {
+    const b = await loadBin("meshes/outline.bin"), u = new Uint32Array(b, 0, 2);
+    const g = new THREE.BufferGeometry();
+    g.setAttribute("position", new THREE.BufferAttribute(new Float32Array(b, 8, u[0]*3), 3));
+    g.setIndex(new THREE.BufferAttribute(new Uint32Array(b, 8 + u[0]*12, u[1]*3), 1));
+    g.computeVertexNormals();
+    outline = new THREE.Mesh(g, new THREE.MeshLambertMaterial({color:0x8899aa, transparent:true, opacity:0.07, depthWrite:false, side:THREE.DoubleSide}));
+    scene.add(outline);
+    g.computeBoundingBox(); const c = new THREE.Vector3(); g.boundingBox.getCenter(c); orbit.target.copy(c);
+  } catch (e) {}
+  placeCam(); resize();
+  await refresh();
+  showPage(page);
+  if (cur.sel) { const rs = cur.multi.slice(); select(rs[0], true); for (const n of rs.slice(1)) select(n, false, true); if (rs.length > 1) { cur.sel = rs[0]; highlight(); listUI(); card(); render(); writeHash(); } }
+})();
+</script>
+</body>
+</html>
